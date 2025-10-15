@@ -12,15 +12,58 @@ class User extends Authenticatable
 {
     use HasApiTokens, HasFactory, Notifiable;
 
+    public function scopeFilter($query, $filters = [])
+    {
+        return $query->when($filters['first_name'] ?? null, function ($q, $first_name) {
+                    $q->where('first_name', 'like', "%$first_name%");
+                })
+                ->when($filters['last_name'] ?? null, function ($q, $last_name) {
+                    $q->where('last_name', 'like', "%$last_name%");
+                })
+                ->when($filters['email'] ?? null, function ($q, $email) {
+                    $q->where('email', 'like', "%$email%");
+                })
+                ->when($filters['phone'] ?? null, function ($q, $phone) {
+                    $q->where('phone_number', 'like', "%$phone%");
+                })
+                ->when($filters['id'] ?? null, function ($q, $id) {
+                    $q->where('id', $id);
+                });
+    }
+
+
+    public function scopeFilterByRole($query, $role)
+    {
+        return match ($role) {
+            'all' => $query,
+            'activeCustomer' => $query->customers()->active(),
+            'notActiveCustomer' => $query->customers()->inActive(),
+            'activeAuthor' => $query->authors()->active(),
+            'notActiveAuthor' => $query->authors()->inActive(),
+            
+            default => $query->where('role', $role),
+        };
+    }
 
     public function scopeActive($query){
         return $query->where('is_active' , true);
     }
 
     public function scopeInactive($query){
-        return $query->where('is_active' , false);
+            return $query->where('is_active' , false);
     }
 
+    public function scopeCustomers($query){
+        return $query->where('role' , 'customer');
+    }
+    
+    public function scopeAdmins($query){
+        return $query->where('role' , 'admin');
+    }
+
+    public function scopeAuthors($query){
+        return $query->where('role' , 'author');
+    }
 
     public function comments(){
         return $this->hasMany('App\Models\Comment');

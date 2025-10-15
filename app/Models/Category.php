@@ -9,6 +9,9 @@ class Category extends Model
 {
     use HasFactory;
 
+
+    protected $fillable = ['name' , 'english_name' , 'parent_id' , 'slug'];
+    
     public function products(){
         return $this->hasMany('App\Models\Product');
     }
@@ -19,5 +22,14 @@ class Category extends Model
 
     public function parent(){
         return $this->belongsTo('App\Models\Category' , 'parent_id');
+    }
+
+    public function scopeAllParents($query){
+
+        return $query->whereNull('parent_id');
+    }
+
+    public function ScopeAllChildren($query){
+        return $query->whereNotNull('parent_id');
     }
 }

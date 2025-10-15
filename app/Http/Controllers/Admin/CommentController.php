@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
+use App\Models\Comment;
 
 class CommentController extends Controller
 {
@@ -12,7 +13,8 @@ class CommentController extends Controller
      */
     public function index()
     {
-        //
+        $comments = Comment::all();
+        return view('admin.comments.index' , compact('comments'));
     }
 
     /**
@@ -58,8 +60,20 @@ class CommentController extends Controller
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(string $id)
+    public function destroy(Comment $comment)
     {
-        //
+        if($comment->delete()){
+            return response()->json(['success' => 'این کامنت با موفقیت حذف شد']);
+        }else{
+            return response()->json(['error' => 'عملیات با خطا مواجه شد . لطفا دوباره تلاش کنید']);
+        }
+    }
+
+    public function toggle(Comment $comment)
+    {
+        $comment->status = $comment->status === 'approved' ? 'seen' : 'approved';
+        $comment->save();
+
+        return response()->json(['status' => $comment->status]);
     }
 }

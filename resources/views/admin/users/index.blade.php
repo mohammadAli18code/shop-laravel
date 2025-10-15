@@ -1,6 +1,6 @@
 @extends('layouts.admin')
 
-@section('title', 'home')
+@section('title', 'کاربران')
 
 
 @section('content')
@@ -13,97 +13,78 @@
     <div class="main-content font-size-13">
         <div class="tab__box">
             <div class="tab__items">
-                <a class="tab__item is-active" href="{{ route('admin/users/all') }}">همه کاربران</a>
-                <a class="tab__item" href="{{ route('admin.users/admins') }}">مدیران</a>
-                <a class="tab__item" href="{{ route('admin.users/customers') }}">مشتریان</a>
-                <a class="tab__item" href="{{ route('admin.users/not-active-customers') }}">کاربران تاییده نشده</a>
-                <a class="tab__item" href="{{ route('admin.users/active-customers') }}">کاربران تایید شده</a>
+                <a class="tab__item {{ $role == 'all' ? 'is-active' : '' }}"
+                    href="{{ route('admin.users.index', ['role' => 'all']) }}">همه کاربران</a>
+                <a class="tab__item {{ $role == 'manager' ? 'is-active' : '' }}"
+                    href="{{ route('admin.users.index', ['role' => 'manager']) }}">مدیران</a>
+                <a class="tab__item {{ $role == 'admin' ? 'is-active' : '' }}"
+                    href="{{ route('admin.users.index', ['role' => 'admin']) }}">ادمین ها</a>
+                <a class="tab__item {{ $role == 'customer' ? 'is-active' : '' }}"
+                    href="{{ route('admin.users.index', ['role' => 'customer']) }}">مشتریان</a>
+                <a class="tab__item {{ $role == 'notActiveCustomer' ? 'is-active' : '' }}"
+                    href="{{ route('admin.users.index', ['role' => 'notActiveCustomer']) }}">مشتریان
+                    تاییده نشده</a>
+                <a class="tab__item {{ $role == 'activeCustomer' ? 'is-active' : '' }}"
+                    href="{{ route('admin.users.index', ['role' => 'activeCustomer']) }}">مشتریان تایید
+                    شده</a>
+                <a class="tab__item {{ $role == 'author' ? 'is-active' : '' }}"
+                    href="{{ route('admin.users.index', ['role' => 'author']) }}">نویسندگان</a>
+                <a class="tab__item {{ $role == 'activeAuthor' ? 'is-active' : '' }}"
+                    href="{{ route('admin.users.index', ['role' => 'activeAuthor']) }}">نویسندگان تایید شده</a>
+                <a class="tab__item {{ $role == 'notActiveAuthor' ? 'is-active' : '' }}"
+                    href="{{ route('admin.users.index', ['role' => 'notActiveAuthor']) }}">نویسندگان تایید
+                    نشده</a>
             </div>
         </div>
         <div class="d-flex flex-space-between item-center flex-wrap padding-30 border-radius-3 bg-white">
             <div class="t-header-search">
-                <form action="" onclick="event.preventDefault();">
+                <form id="user-filter-form" action="{{ route('admin.users.index', $role) }}" method="GET">
                     <div class="t-header-searchbox font-size-13">
                         <input type="text" class="text search-input__box font-size-13" placeholder="جستجوی کاربر">
-                        <div class="t-header-search-content ">
-                            <input type="text" class="text" placeholder="ایمیل">
-                            <input type="text" class="text" placeholder="شماره">
-                            <input type="text" class="text" placeholder="آی پی">
-                            <input type="text" class="text margin-bottom-20" placeholder="نام و نام خانوادگی">
-                            <btutton class="btn btn-netcopy_net">جستجو</btutton>
+                        <div class="t-header-search-content">
+                            <input type="text" name="id" class="text" placeholder="آیدی">
+                            <input type="text" name="email" class="text" placeholder="ایمیل">
+                            <input type="text" name="phone" class="text" placeholder="شماره">
+                            <input type="text" name="first_name" class="text margin-bottom-20" placeholder="نام">
+                            <input type="text" name="last_name" class="text margin-bottom-20" placeholder="نام خانوادگی">
+                            <button type="submit" class="btn btn-netcopy_net">جستجو</button>
                         </div>
                     </div>
                 </form>
             </div>
+
         </div>
-        <div class="table__box">
-            <table class="table">
-                <thead role="rowgroup">
-                    <tr role="row" class="title-row">
-                        <th>شناسه</th>
-                        <th>عکس</th>
-                        <th>نام</th>
-                        <th>نام خانوادگی</th>
-                        <th>ایمیل </th>
-                        <th>شماره موبایل </th>
-                        <th>سطح کاربری </th>
-                        <th> تاریخ عضویت</th>
-                        <th>ای پی</th>
-                        <th>وضعیت حساب</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr style="background-color:#189bc3" role="row" class="">
-                        <td><a href="">{{ auth()->user()->id }}</a></td>
-                        <td><img class="profile-pic" src="{{ asset(auth()->user()->image) }}" alt="">
-                        </td>
-                        <td>{{ auth()->user()->first_name }}</td>
-                        <td>{{ auth()->user()->last_name }}</td>
-                        <td>{{ auth()->user()->email }}</td>
-                        <td>{{ auth()->user()->phone_number }}</td>
-                        <td>ادمین</td>
-                        <td>{{ auth()->user()->created_at }}</td>
-                        <td>1.1.1.1</td>
-                        <td class="text-success">تایید شده</td>
-                        <td>
-                            <a href="{{ route('admin/profile/admin/edit/' . auth()->user()->id) }}" class="item-edit "
-                                title="ویرایش"></a>
-                        </td>
-                    </tr>
-                    @foreach ($users as $user)
-                        <tr role="row" class="">
-                            <td><a href="">{{ $user->id }}</a></td>
-                            <td><img class="profile-pic" src="{{ asset($user->image) }}" alt=""></td>
-                            <td>{{ $user->first_name }}</td>
-                            <td>{{ $user->last_name }}</td>
-                            <td>{{ $user->email }}</td>
-                            <td>{{ $user->phone_number }}</td>
-                            @if ($user->role == 'admin')
-                                <td>ادمین</td>
-                            @elseif($user->role == 'user')
-                                <td>مشتری</td>
-                            @elseif($user->role == 'author')
-                                <td>نویسنده</td>
-                            @elseif($user->role == 'manager')
-                                <td>مدیر</td>
-                            @endif
-                            <td>{{ $user->created_at }}</td>
-                            <td>1.1.1.1</td>
-                            @if ($allUser->is_active == 1)
-                                <td class="text-error">تایید نشده</td>
-                            @elseif($user->is_active == 2)
-                                <td class="text-success">تایید شده</td>
-                            @endif
-                    @endforeach
-                    </tr>
-                </tbody>
-            </table>
+        <div class="table__box" id="users-table">
+            @include('admin.users.partials.__table', ['users' => $users])
         </div>
     </div>
-    </div>
-@section('scripts')
-    <script src="  {{ asset('public/admin-panel/js/jquery-3.4.1.min.js') }}"></script>
-    <script src="  {{ asset('public/admin-panel/js/js.js') }}"></script>
 @endsection
+@section('script')
+    <script src="{{ asset('admin/assets/js/jquery-3.4.1.min.js') }}"></script>
+    <script src="{{ asset('admin/assets/js/js.js') }}"></script>
+@endsection
+<script>
+    $(document).ready(function() {
+        $('#user-filter-form').on('submit', function(e) {
+            e.preventDefault(); // جلوگیری از submit معمولی
+
+            let form = $(this);
+            let url = form.attr('action');
+            let data = form.serialize();
+
+            $.ajax({
+                url: url,
+                type: 'GET',
+                data: data,
+                success: function(response) {
+                    $('#users-table').html(response); // جایگزین کردن جدول
+                },
+                error: function(xhr) {
+                    console.log('Error:', xhr.responseText);
+                }
+            });
+        });
+    });
+</script>
 
 </html>

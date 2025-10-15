@@ -9,7 +9,7 @@ class Product extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['category_id'];
+    protected $fillable = ['title' , 'slug' , 'description' , 'stock' , 'price' , 'category_id'];
 
 
     public function scopeApproved($query){
@@ -29,7 +29,7 @@ class Product extends Model
     }
 
     public function category(){
-        return $this->belongsTo('App\Models\Category');
+        return $this->belongsTo('App\Models\Category' , 'category_id');
     }
 
     public function comments(){

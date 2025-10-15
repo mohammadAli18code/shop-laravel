@@ -17,7 +17,7 @@ class HomeController extends Controller
 
         // $parent_cats = Category::with('children')->whereNull('parent_id') ->get();
         // $children_cats = Category::with('children')->whereNotNull('parent_id') ->get();
-        $banners = Banner::all();
+        $banners = Banner::active()->get();
         $products = Product::approved()->take(10)->get();
         $cart = Cart::all();
         $favorite_products = Product::approved()->take(10)->get();
