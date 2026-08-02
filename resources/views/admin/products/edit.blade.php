@@ -164,7 +164,7 @@
                         <option value="{{ $product->category->id }}" selected>
                             {{ $product->category->name }}
                         </option>
-                        @foreach ($categoryList as $category)
+                        @foreach ($categories as $category)
                             @if ($category->parent_id != null && $category->id != $product->category->id)
                                 <option value="{{ $category->id }}">
                                     {{ $category->name }}
@@ -182,7 +182,7 @@
 
                     <!-- لیست ویژگی‌های فعلی -->
                     <div id="attributeList" class="space-y-3">
-                        @foreach ($product->attributes as $attribute)
+                        @foreach ($product->attributeValues as $attribute)
                             <div class="flex items-center justify-between px-4 py-2 bg-gray-50 border rounded-md attribute-item"
                                 data-id="{{ $attribute->id }}">
                                 <div class="flex items-center gap-2 text-gray-700">
@@ -193,6 +193,9 @@
                                     onclick="deleteAttribute({{ $attribute->id }}, this)">✖</button>
                             </div>
                         @endforeach
+                        <!-- hidden inputs -->
+                        <div id="attributeHiddenFields"></div>
+
                     </div>
 
                     <!-- افزودن ویژگی جدید -->
@@ -224,6 +227,8 @@
                                         onclick="deleteImage({{ $image->id }} , this)">✖</button>
                                 </div>
                             @endforeach
+                            <div id="galleryPreview" class="gallery-preview"></div>
+
                         </div>
                     </div>
                     <hr class="my-6">
@@ -248,6 +253,9 @@
                                         onclick="deleteColor({{ $color->id }}, this)">✖</button>
                                 </div>
                             @endforeach
+                            <div id="customColorsPreview" class="flex flex-wrap gap-4"></div>
+                            <div id="customColorsFields"></div>
+
                         </div>
                     </div>
                     <hr class="my-6">
@@ -278,7 +286,7 @@
                                 class="w-full sm:w-1/2 px-4 py-2 border rounded-md shadow-sm focus:ring focus:ring-indigo-100">
                             <input type="color" id="colorCode" class="w-12 h-12 p-0 border rounded-md cursor-pointer">
                             <!-- <input type="hidden" name="custom_colors_names[]" value="">
-                                            <input type="hidden" name="custom_colors_hex[]" value=""> -->
+                                                                                    <input type="hidden" name="custom_colors_hex[]" value=""> -->
                             <button type="button" id="addCustomColor"
                                 class="bg-indigo-500 text-white px-4 py-2 rounded-md hover:bg-indigo-600 transition">
                                 افزودن رنگ
@@ -302,243 +310,173 @@
     <script src="  {{ asset('public/admin-panel/js/js.js') }}"></script>
 @endsection
 <script>
+    let attributes = []; // ویژگی‌های جدید اضافه‌شده
+
     function addAttribute(productId) {
-        const name = document.getElementById("attributeName").value.trim();
-        const value = document.getElementById("attributeValue").value.trim();
+        const name = document.getElementById('attributeName').value.trim();
+        const value = document.getElementById('attributeValue').value.trim();
 
-        if (!name || !value) {
-            alert("لطفاً هر دو فیلد نام و مقدار ویژگی را وارد کنید.");
-            return;
-        }
+        if (!name || !value) return alert("نام و مقدار ویژگی را وارد کنید.");
 
-        $.ajax({
-            url: "<?= url('admin/products/add-attribute') ?>",
-            method: "POST",
-            data: {
-                product_id: productId,
-                name: name,
-                value: value
-            },
-            success: function(response) {
-                try {
-                    const res = JSON.parse(response);
-                    if (res.success) {
-                        const item = `
-                        <div class="flex items-center gap-4 mb-3 attribute-item" data-id="${res.attribute.id}">
-                            <span class="font-medium">${res.attribute.name}:</span>
-                            <span>${res.attribute.value}</span>
-                            <button type="button" class="text-red-500 hover:text-red-700 text-lg remove-attribute-btn" onclick="deleteAttribute(${res.attribute.id}, this)">✖</button>
-                        </div>
-                    `;
-                        $('#attributeList').append(item);
-                        $('#attributeName').val('');
-                        $('#attributeValue').val('');
-                    } else {
-                        alert("خطا در افزودن ویژگی.");
-                    }
-                } catch (e) {
-                    alert("پاسخ سرور نامعتبر بود.");
-                }
-            },
-            error: function() {
-                alert("خطا در ارتباط با سرور.");
-            }
-        });
-    }
-
-    function deleteAttribute(attributeId, btn) {
-        if (!confirm("آیا از حذف این ویژگی مطمئن هستید؟")) return;
-
-        $.ajax({
-            url: "<?= url('admin/products/delete-attribute') ?>",
-            method: "POST",
-            data: {
-                attribute_id: attributeId
-            },
-            success: function(response) {
-                try {
-                    const res = JSON.parse(response);
-                    if (res.success) {
-                        $(btn).closest('.attribute-item').remove();
-                    } else {
-                        alert("خطا در حذف ویژگی.");
-                    }
-                } catch (e) {
-                    alert("پاسخ نامعتبر از سرور.");
-                }
-            },
-            error: function() {
-                alert("خطا در ارتباط با سرور.");
-            }
-        });
-    }
-    //
-    //
-    //
-
-    // پیش‌نمایش عکس‌های جدید بدون ذخیره
-    const galleryInput = document.getElementById("galleryInput");
-    const galleryPreview = document.getElementById("galleryPreview");
-
-    galleryInput.addEventListener("change", function() {
-        galleryPreview.innerHTML = ""; // پاک‌کردن پیش‌نمایش قبلی
-        const files = Array.from(this.files);
-
-        if (files.length > 10) {
-            alert("حداکثر ۱۰ تصویر قابل انتخاب است.");
-            this.value = "";
-            return;
-        }
-
-        files.forEach((file) => {
-            if (!file.type.startsWith("image/")) return;
-
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                const container = document.createElement("div");
-                container.className = "preview-image-container";
-
-                const img = document.createElement("img");
-                img.src = e.target.result;
-                img.className = "preview-image";
-
-                container.appendChild(img);
-                galleryPreview.appendChild(container);
-            };
-            reader.readAsDataURL(file);
-        });
-    });
-
-    // حذف عکس‌های قبلی با Ajax
-    function deleteImage(imageId, btn) {
-        if (!confirm("آیا از حذف این عکس مطمئن هستید؟")) return;
-
-        $.ajax({
-            url: "<?= url('admin/products/delete-image') ?>",
-            type: "POST",
-            data: {
-                image_id: imageId
-            },
-            success: function(response) {
-                try {
-                    const res = JSON.parse(response);
-                    if (res.success) {
-                        $(btn).closest(".preview-image-container").remove(); // استفاده از jQuery
-                    } else {
-                        alert("حذف عکس با خطا مواجه شد.");
-                    }
-                } catch (e) {
-                    alert("پاسخ سرور نامعتبر بود.");
-                }
-            },
-            error: function() {
-                alert("خطا در ارتباط با سرور.");
-            }
-        });
-    }
-
-
-    const addCustomColorBtn = document.getElementById('addCustomColor');
-    const colorNameInput = document.getElementById('colorName');
-    const colorCodeInput = document.getElementById('colorCode');
-    const previewContainer = document.getElementById('customColorsPreview');
-    const hiddenFieldsContainer = document.getElementById('customColorsFields');
-
-    let customColors = [];
-
-    addCustomColorBtn.addEventListener('click', () => {
-        const name = colorNameInput.value.trim();
-        const code = colorCodeInput.value;
-
-        if (!name) {
-            alert("نام رنگ را وارد کنید.");
-            return;
-        }
-
-        customColors.push({
+        attributes.push({
             name,
-            code
+            value
         });
-        renderCustomColors();
-        colorNameInput.value = "";
-    });
+        renderAttributes();
 
-    function renderCustomColors() {
-        previewContainer.innerHTML = '';
-        hiddenFieldsContainer.innerHTML = '';
+        document.getElementById('attributeName').value = '';
+        document.getElementById('attributeValue').value = '';
+    }
 
-        customColors.forEach((color, index) => {
-            // پیش‌نمایش
-            const container = document.createElement('div');
-            container.className = "flex items-center gap-2 bg-gray-100 px-3 py-2 rounded-lg shadow-sm";
+    function renderAttributes() {
+        const preview = document.getElementById('attributeList');
+        const hidden = document.getElementById('attributeHiddenFields');
 
-            const circle = document.createElement('div');
-            circle.className = "w-6 h-6 rounded-full border border-gray-300";
-            circle.style.backgroundColor = color.code;
+        // حذف قبلی
+        hidden.innerHTML = '';
+        // نمایش ویژگی‌های جدید
+        attributes.forEach((attr, index) => {
+            const div = document.createElement('div');
+            div.className = "flex items-center justify-between px-4 py-2 bg-gray-100 border rounded-md mb-2";
+            div.innerHTML = `<span>${attr.name}: ${attr.value}</span>
+                         <button type="button" onclick="removeAttribute(${index})">✖</button>`;
+            preview.appendChild(div);
 
-            const label = document.createElement('span');
-            label.className = "text-sm text-gray-700";
-            label.textContent = color.name;
-
-            const removeBtn = document.createElement('button');
-            removeBtn.innerHTML = '&times;';
-            removeBtn.className = "text-red-500 text-xl leading-none ml-2 hover:text-red-700";
-            removeBtn.onclick = () => {
-                customColors.splice(index, 1);
-                renderCustomColors();
-            };
-
-            container.appendChild(circle);
-            container.appendChild(label);
-            container.appendChild(removeBtn);
-            previewContainer.appendChild(container);
-
-            // فیلدهای hidden برای ارسال
-            const nameInput = document.createElement('input');
-            nameInput.type = "hidden";
-            nameInput.name = `custom_colors[${index}][custom_name]`;
-            nameInput.value = color.name;
-
-            const codeInput = document.createElement('input');
-            codeInput.type = "hidden";
-            codeInput.name = `custom_colors[${index}][custom_code]`;
-            codeInput.value = color.code;
-
-            hiddenFieldsContainer.appendChild(nameInput);
-            hiddenFieldsContainer.appendChild(codeInput);
+            // hidden inputs
+            hidden.innerHTML += `<input type="hidden" name="attributes[${index}][name]" value="${attr.name}">
+                             <input type="hidden" name="attributes[${index}][value]" value="${attr.value}">`;
         });
     }
 
+    function removeAttribute(index) {
+        attributes.splice(index, 1);
+        renderAttributes();
+    }
 
-
-    // حذف رنگ‌های قبلی با Ajax
-    function deleteColor(colorId, btn) {
-        if (!confirm("آیا از حذف این رنگ مطمئن هستید؟")) return;
-
-        $.ajax({
-            url: "<?= url('admin/products/delete-color') ?>",
-            type: "POST",
-            data: {
-                color_id: colorId
-            },
-            success: function(response) {
-                try {
-                    const res = JSON.parse(response);
-                    if (res.success) {
-                        btn.closest(".preview-color-container").remove();
-                    } else {
-                        alert("حذف رنگ با خطا مواجه شد.");
-                    }
-                } catch (e) {
-                    alert("پاسخ نامعتبر از سرور.");
-                }
-            },
-            error: function() {
-                alert("خطا در ارتباط با سرور.");
+    // حذف ویژگی از دیتابیس
+    function deleteAttribute(id, btn) {
+        Swal.fire({
+            title: 'آیا مطمئن هستید؟',
+            text: "این ویژگی حذف خواهد شد!",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#3085d6',
+            cancelButtonColor: '#d33',
+            confirmButtonText: 'بله، حذف شود!'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                axios.post(`/admin/attributes/${id}/delete`, {
+                        _method: 'DELETE'
+                    })
+                    .then(res => btn.closest('.attribute-item').remove())
+                    .catch(err => Swal.fire('خطا', 'حذف انجام نشد', 'error'));
             }
         });
     }
 </script>
 
+
+<script>
+    const galleryInput = document.getElementById("galleryInput");
+    const galleryPreview = document.getElementById("galleryPreview");
+
+    galleryInput.addEventListener("change", function() {
+        const files = Array.from(this.files);
+        files.forEach(file => {
+            if (!file.type.startsWith("image/")) return;
+            const reader = new FileReader();
+            reader.onload = e => {
+                const container = document.createElement("div");
+                container.className = "preview-image-container";
+                container.innerHTML =
+                    `<img src="${e.target.result}" class="preview-image">
+                                   <button type="button" class="remove-btn" onclick="removePreviewImage(this)">✖</button>`;
+                galleryPreview.appendChild(container);
+            }
+            reader.readAsDataURL(file);
+        });
+    });
+
+    function removePreviewImage(btn) {
+        btn.closest('.preview-image-container').remove();
+    }
+
+    // حذف عکس از دیتابیس
+    function deleteImage(id, btn) {
+        Swal.fire({
+            title: 'آیا مطمئن هستید؟',
+            text: "این عکس حذف خواهد شد!",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'بله',
+            cancelButtonText: 'خیر'
+        }).then(result => {
+            if (result.isConfirmed) {
+                axios.post(`/admin/images/${id}/delete`, {
+                        _method: 'DELETE'
+                    })
+                    .then(res => btn.closest('.preview-image-container').remove())
+                    .catch(err => Swal.fire('خطا', 'حذف انجام نشد', 'error'));
+            }
+        });
+    }
+</script>
+
+
+<script>
+    let customColors = [];
+
+    document.getElementById('addCustomColor').addEventListener('click', () => {
+        const name = document.getElementById('colorName').value.trim();
+        const code = document.getElementById('colorCode').value;
+        if (!name) return alert("نام رنگ را وارد کنید.");
+        customColors.push({
+            name,
+            code
+        });
+        renderCustomColors();
+    });
+
+    function renderCustomColors() {
+        const preview = document.getElementById('customColorsPreview');
+        const hidden = document.getElementById('customColorsFields');
+        preview.innerHTML = '';
+        hidden.innerHTML = '';
+        customColors.forEach((color, index) => {
+            preview.innerHTML += `<div class="preview-color-container">
+                                <div class="color-box" style="background-color:${color.code}"></div>
+                                <span>${color.name}</span>
+                                <button type="button" onclick="removeCustomColor(${index})">✖</button>
+                              </div>`;
+            hidden.innerHTML += `<input type="hidden" name="custom_colors[${index}][name]" value="${color.name}">
+                             <input type="hidden" name="custom_colors[${index}][hex]" value="${color.code}">`;
+        });
+    }
+
+    function removeCustomColor(index) {
+        customColors.splice(index, 1);
+        renderCustomColors();
+    }
+
+    // حذف رنگ از دیتابیس
+    function deleteColor(id, btn) {
+        Swal.fire({
+            title: 'آیا مطمئن هستید؟',
+            text: "این رنگ حذف خواهد شد!",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'بله',
+            cancelButtonText: 'خیر'
+        }).then(result => {
+            if (result.isConfirmed) {
+                axios.post(`/admin/colors/${id}/delete`, {
+                        _method: 'DELETE'
+                    })
+                    .then(res => btn.closest('.preview-color-container').remove())
+                    .catch(err => Swal.fire('خطا', 'حذف انجام نشد', 'error'));
+            }
+        });
+    }
+</script>
 
 </html>

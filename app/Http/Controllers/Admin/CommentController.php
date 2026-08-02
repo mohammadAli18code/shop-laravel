@@ -71,7 +71,7 @@ class CommentController extends Controller
 
     public function toggle(Comment $comment)
     {
-        $comment->status = $comment->status === 'approved' ? 'seen' : 'approved';
+        $comment->status = $comment->status === 'approved' ? 'rejected' : 'approved';
         $comment->save();
 
         return response()->json(['status' => $comment->status]);

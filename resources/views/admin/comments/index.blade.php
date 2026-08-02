@@ -133,12 +133,14 @@
                                 </td>
                                 <td>{{ \Carbon\Carbon::parse($comment->created_at)->diffForHumans() }}</td>
                                 <td>
-                                    @if ($product->status === 'active')
+                                    @if ($comment->status === 'approved')
                                         <span class="badge badge-success">تایید شده</span>
-                                    @elseif($product->status === 'pending')
+                                    @elseif($comment->status === 'seen')
                                         <span class="badge badge-pending">در انتظار تایید</span>
-                                    @else
+                                    @elseif($comment->status === 'rejected')
                                         <span class="badge badge-unseen">رد شده</span>
+                                    @elseif($comment->status === 'unseen')
+                                        <span class="badge badge-pending">بررسی نشده</span>
                                     @endif
                                 </td>
                                 <td>
